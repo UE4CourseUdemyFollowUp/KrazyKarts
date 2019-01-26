@@ -8,6 +8,7 @@
 AGoKart::AGoKart()
 	: Mass(1000.f)
 	, MaxDrivingForce(10000.f)
+	, MaxDegreesPerSecond(90.f)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -32,10 +33,32 @@ void AGoKart::Tick(float DeltaTime)
 
 	Velocity += Acceleration * DeltaTime;
 
+	ApplyRotation(DeltaTime);
+	UpdateLocationFromVelocity(DeltaTime);
+
+}
+
+void AGoKart::ApplyRotation(float DeltaTime)
+{
+	float RotationDelta = MaxDegreesPerSecond * DeltaTime * SteeringThrow;
+	FQuat DeltaRot(GetActorUpVector(), FMath::DegreesToRadians(RotationDelta));
+
+	Velocity = DeltaRot.RotateVector(Velocity);
+
+	AddActorWorldRotation(DeltaRot, true);
+}
+
+void AGoKart::UpdateLocationFromVelocity(float DeltaTime)
+{
 	FVector Translation = Velocity * 100 * DeltaTime;
 
-	AddActorWorldOffset(Translation);
+	FHitResult* Hit = nullptr;
+	AddActorWorldOffset(Translation, true, Hit);
 
+	if (Hit && Hit->bBlockingHit)
+	{
+		Velocity = FVector::ZeroVector;
+	}
 }
 
 // Called to bind functionality to input
@@ -46,7 +69,7 @@ void AGoKart::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
 	PlayerInputComponent->BindAxis("MoveForward", this, &AGoKart::MoveForward);
-	//PlayerInputComponent->BindAxis("MoveRight", this, &AGoKart::MoveRight);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AGoKart::MoveRight);
 }
 
 
@@ -57,6 +80,5 @@ void AGoKart::MoveForward(float Val)
 
 void AGoKart::MoveRight(float Val)
 {
-	Velocity = GetActorRightVector() * 20 * Val;
-	UE_LOG(LogTemp, Warning, TEXT("Move right at %d"), Val);
+	SteeringThrow = Val;
 }
