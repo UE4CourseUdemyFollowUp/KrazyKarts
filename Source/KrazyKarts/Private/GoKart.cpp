@@ -3,16 +3,19 @@
 #include "GoKart.h"
 
 #include "Components/InputComponent.h"
+#include "Engine/World.h"
+
 
 // Sets default values
 AGoKart::AGoKart()
 	: Mass(1000.f)
 	, MaxDrivingForce(10000.f)
 	, MaxDegreesPerSecond(90.f)
+	, DragCoefficient(16.f)
+	, RollingResistanceCoefficient(0.015f)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 // Called when the game starts or when spawned
@@ -28,8 +31,12 @@ void AGoKart::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FVector Force = GetActorForwardVector() * MaxDrivingForce * Throttle;
+	Force += GetAirResistance();
+	Force += GetRollingResistance();
 
 	FVector Acceleration = Force / (Mass > 0.f ? Mass : 1.f);
+	
+
 
 	Velocity += Acceleration * DeltaTime;
 
@@ -81,4 +88,16 @@ void AGoKart::MoveForward(float Val)
 void AGoKart::MoveRight(float Val)
 {
 	SteeringThrow = Val;
+}
+
+FVector AGoKart::GetAirResistance()
+{
+	return -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient;
+}
+
+FVector AGoKart::GetRollingResistance()
+{
+	const float AccelerationDueToGravity = -(GetWorld()->GetGravityZ() / 100.f);
+	const float NormalForce = Mass * AccelerationDueToGravity;
+	return -Velocity.GetSafeNormal() * RollingResistanceCoefficient * NormalForce;
 }
