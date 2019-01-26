@@ -40,7 +40,7 @@ private:
 	float MaxDrivingForce;
 
 	UPROPERTY(EditAnywhere)
-	float MaxDegreesPerSecond;
+	float MinTurningRadius;
 
 	UPROPERTY(EditAnywhere)
 	float DragCoefficient;
