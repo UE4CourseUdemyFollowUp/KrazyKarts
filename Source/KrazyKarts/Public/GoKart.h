@@ -48,8 +48,11 @@ private:
 	UPROPERTY(EditAnywhere)
 	float RollingResistanceCoefficient;
 
-	void MoveForward(float Val);
-	void MoveRight(float Val);
+	UFUNCTION( Server, Reliable, WithValidation)
+	void Server_MoveForward(float Val);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_MoveRight(float Val);
 
 	FVector Velocity;
 
