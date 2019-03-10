@@ -19,6 +19,9 @@ struct FGoKartMove
 
 	UPROPERTY()
 	float DeltaTime;
+
+	UPROPERTY()
+	float Time;
 };
 
 USTRUCT()
@@ -58,11 +61,18 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+
+	void SimulateMove(const FGoKartMove& Move);
+
+	FGoKartMove CreateMove(const float& DeltaTime) const;
+
+	void ClearAnacknowledgedMoves(const FGoKartMove& LastMove);
+
 	FVector GetAirResistance();
 	FVector GetRollingResistance();
 
-	void UpdateLocationFromVelocity(float DeltaTime);
-	void ApplyRotation(float DeltaTime);
+	void UpdateLocationFromVelocity(const float& DeltaTime);
+	void ApplyRotation(const float& DeltaTime, const float& SteeringThrow);
 
 	UPROPERTY(EditAnywhere)
 	float Mass;
@@ -84,7 +94,7 @@ private:
 	void MoveRight(float Val);
 
 	UFUNCTION( Server, Reliable, WithValidation)
-	void Server_SendMove(FGoKartMove Move);
+	void Server_SendMove(const FGoKartMove & Move);
 
 	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
 	FGoKartState ServerState;
@@ -92,11 +102,9 @@ private:
 	UFUNCTION()
 	virtual void OnRep_ServerState();
 
+	TArray<FGoKartMove> UnacknowledgedMoves;
+
 	FVector Velocity;
-
-	UPROPERTY(Replicated)
 	float Throttle;
-
-	UPROPERTY(Replicated)
 	float SteeringThrow;
 };
