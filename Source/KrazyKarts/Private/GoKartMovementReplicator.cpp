@@ -56,23 +56,45 @@ void UGoKartMovementReplicator::ClientTick(float DeltaTime)
 		return;
 	}
 
-	FVector TargetLocation = ServerState.Transform.GetLocation();
+
 	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenLastUpdates;
-	FVector StartLocation = ClientStartTransform.GetLocation();
-	FVector StartDerivative = ClientStartVelocity * ClientTimeBetweenLastUpdates * 100;
-	FVector TargetDerivative = ServerState.Velocity * ClientTimeBetweenLastUpdates * 100;
+	FHermiteCubicSpline CubicSpline = CreateCubicSpline();
 
-	FVector NewLocation = FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
-    
+	InterpolateLocation(CubicSpline, LerpRatio);
+	InterpolateVelocity(CubicSpline, LerpRatio);
+	InterpolateRotation(LerpRatio);
+}
+
+FHermiteCubicSpline UGoKartMovementReplicator::CreateCubicSpline()
+{
+	FHermiteCubicSpline CubicSpline;
+	CubicSpline.TargetLocation = ServerState.Transform.GetLocation();
+
+	CubicSpline.StartLocation = ClientStartTransform.GetLocation();
+	CubicSpline.StartDerivative = ClientStartVelocity * ClientTimeBetweenLastUpdates * 100;
+	CubicSpline.TargetDerivative = ServerState.Velocity * ClientTimeBetweenLastUpdates * 100;
+
+	return CubicSpline;
+}
+
+void UGoKartMovementReplicator::InterpolateLocation(const FHermiteCubicSpline &CubicSpline, const float LerpRatio)
+{
+	FVector NewLocation = CubicSpline.InterpolateLocation(LerpRatio);
 	GetOwner()->SetActorLocation(NewLocation);
+}
 
+void UGoKartMovementReplicator::InterpolateVelocity(const FHermiteCubicSpline &CubicSpline, const float LerpRatio)
+{
 	if (MovementComponent)
 	{
-		FVector NewDerivative = FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+		FVector NewDerivative = CubicSpline.InterpolateDerivative(LerpRatio);
 		FVector NewVelocity = NewDerivative / (ClientTimeBetweenLastUpdates * 100);
 		MovementComponent->SetVelocity(NewVelocity);
 	}
+}
 
+void UGoKartMovementReplicator::InterpolateRotation(const float LerpRatio)
+{
 	FQuat TargetRotation = ServerState.Transform.GetRotation();
 	FQuat StartRotation = ClientStartTransform.GetRotation();
 
