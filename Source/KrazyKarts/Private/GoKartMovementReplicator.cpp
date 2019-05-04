@@ -2,6 +2,7 @@
 
 #include "GoKartMovementReplicator.h"
 #include "UnrealNetwork.h"
+#include "GameFramework/Actor.h"
 
 // Sets default values for this component's properties
 UGoKartMovementReplicator::UGoKartMovementReplicator()
@@ -65,6 +66,11 @@ void UGoKartMovementReplicator::ClientTick(float DeltaTime)
 	InterpolateRotation(LerpRatio);
 }
 
+void UGoKartMovementReplicator::SetMeshOffsetRoot(USceneComponent * Root)
+{
+	MeshOffsetRoot = Root;
+}
+
 FHermiteCubicSpline UGoKartMovementReplicator::CreateCubicSpline()
 {
 	FHermiteCubicSpline CubicSpline;
@@ -80,7 +86,11 @@ FHermiteCubicSpline UGoKartMovementReplicator::CreateCubicSpline()
 void UGoKartMovementReplicator::InterpolateLocation(const FHermiteCubicSpline &CubicSpline, const float LerpRatio)
 {
 	FVector NewLocation = CubicSpline.InterpolateLocation(LerpRatio);
-	GetOwner()->SetActorLocation(NewLocation);
+
+	if (MeshOffsetRoot != nullptr)
+	{
+		MeshOffsetRoot->SetWorldLocation(NewLocation);
+	}
 }
 
 void UGoKartMovementReplicator::InterpolateVelocity(const FHermiteCubicSpline &CubicSpline, const float LerpRatio)
@@ -100,7 +110,10 @@ void UGoKartMovementReplicator::InterpolateRotation(const float LerpRatio)
 
 	FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, LerpRatio);
 
-	GetOwner()->SetActorRotation(NewRotation);
+	if (MeshOffsetRoot != nullptr)
+	{
+		MeshOffsetRoot->SetWorldRotation(NewRotation);
+	}
 }
 
 void UGoKartMovementReplicator::Server_SendMove_Implementation(const FGoKartMove & Move)
@@ -167,8 +180,15 @@ void UGoKartMovementReplicator::SimulatedProxy_OnRep_ServerState()
 	ClientTimeBetweenLastUpdates = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0.f;
 
-	ClientStartTransform = GetOwner()->GetActorTransform();
+	if (MeshOffsetRoot != nullptr)
+	{
+		ClientStartTransform.SetLocation(MeshOffsetRoot->GetComponentLocation());
+		ClientStartTransform.SetRotation(MeshOffsetRoot->GetComponentQuat());
+	}
+	
 	ClientStartVelocity = MovementComponent->GetVelocity();
+
+	GetOwner()->SetActorTransform(ServerState.Transform);
 }
 
 void UGoKartMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const

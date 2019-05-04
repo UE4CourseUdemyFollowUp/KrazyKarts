@@ -88,6 +88,12 @@ private:
 	UPROPERTY()
 	UGoKartMovementComponent* MovementComponent;
 
+	UPROPERTY()
+	USceneComponent* MeshOffsetRoot;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMeshOffsetRoot(USceneComponent* Root);
+
 	FHermiteCubicSpline CreateCubicSpline();
 	void InterpolateLocation(const FHermiteCubicSpline &CubicSpline, const float LerpRatio);
 	void InterpolateVelocity(const FHermiteCubicSpline &CubicSpline, const float LerpRatio);
