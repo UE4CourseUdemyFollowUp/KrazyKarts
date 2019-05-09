@@ -3,6 +3,7 @@
 #include "GoKartMovementReplicator.h"
 #include "UnrealNetwork.h"
 #include "GameFramework/Actor.h"
+#include "Engine/World.h"
 
 // Sets default values for this component's properties
 UGoKartMovementReplicator::UGoKartMovementReplicator()
@@ -121,16 +122,12 @@ void UGoKartMovementReplicator::Server_SendMove_Implementation(const FGoKartMove
 	if (!MovementComponent)
 		return;
 
+	ClientSimulatedTime += Move.DeltaTime;
 	MovementComponent->SimulateMove(Move);
 
 	ServerState.LastMove = Move;
 	ServerState.Transform = GetOwner()->GetActorTransform();
 	ServerState.Velocity = MovementComponent->GetVelocity();
-}
-
-bool UGoKartMovementReplicator::Server_SendMove_Validate(const FGoKartMove & Move)
-{
-	return true;
 }
 
 void UGoKartMovementReplicator::ClearAnacknowledgedMoves(const FGoKartMove& LastMove)
@@ -197,3 +194,21 @@ void UGoKartMovementReplicator::GetLifetimeReplicatedProps(TArray< FLifetimeProp
 	DOREPLIFETIME(UGoKartMovementReplicator, ServerState);
 }
 
+bool UGoKartMovementReplicator::Server_SendMove_Validate(const FGoKartMove & Move)
+{
+	float ProposedTime = ClientSimulatedTime + Move.DeltaTime;
+
+	if (!(ProposedTime <= GetWorld()->GetTimeSeconds()))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Received infasten time"));
+		return false;
+	}
+
+	if (!Move.isValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Received invalid move"))
+		return false;
+	}
+
+	return true;;
+}
